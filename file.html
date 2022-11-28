@@ -1,1 +1,656 @@
 
+
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CodeS</title>
+</head>
+<body>
+<p>
+Exp3
+Simple tcp ip client server communication:
+3Client:
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+//for socket and related functions
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+//for including structures which will store information needed
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+#define SIZE 1000
+//main functions
+int main()
+{
+int socketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
+// server address
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_port = htons(9002);
+serverAddress.sin_addr.s_addr = INADDR_ANY;
+// communicates with listen
+connect(socketDescriptor, (struct sockaddr *)&amp;serverAddress, sizeof(serverAddress));
+char serverResponse[SIZE];
+recv(socketDescriptor, &amp;serverResponse, sizeof(serverResponse), 0);
+printf(&quot;Ther server sent the data : %s&quot;, serverResponse);
+//closing the socket
+close(socketDescriptor);
+return 0;
+}
+
+3Server:
+#include&lt;stdio.h&gt;
+#include&lt;stdlib.h&gt;
+#include&lt;sys/types.h&gt;
+#include&lt;sys/socket.h&gt;
+#include&lt;netinet/in.h&gt;
+
+#include &lt;unistd.h&gt;
+int main(){
+char serverMessage[256] = &quot;You have a missed call from server\n&quot;;
+//create the server socket
+int socketDescriptor = socket(AF_INET,SOCK_STREAM,0);
+//define the server address
+//creating the address as same way we have created for TCPclient
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_port = htons(9002);
+serverAddress.sin_addr.s_addr = INADDR_ANY;
+//calling bind function to oir specified IP and port
+bind(socketDescriptor,(struct sockaddr*) &amp;serverAddress,sizeof(serverAddress));
+listen(socketDescriptor,5);
+//starting the accepting
+//accept(socketWeAreAccepting,structuresClientIsConnectingFrom,)
+int client_socket = accept(socketDescriptor, NULL, NULL);
+//sending data
+//send(toWhom,Message,SizeOfMessage,FLAG);
+send(client_socket,serverMessage,sizeof(serverMessage),0);
+//close the socket
+close(socketDescriptor);
+return 0;
+}
+
+Exp4
+udp echo client server communication:
+4Client:
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/types.h&gt;
+
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#define MAXLINE 1024
+#define PORT 5035
+int main(){
+// socket descriptor creation in udp mode
+int serverDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
+// for storing address of address
+socklen_t addressLength;
+// preparing message
+char sendMessage[MAXLINE],recvMessage[MAXLINE];
+printf(&quot;\nEnter message :&quot;);
+fgets(sendMessage,sizeof(sendMessage),stdin);
+// storing address in serverAddress
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr = INADDR_ANY;
+serverAddress.sin_port = htons(PORT);
+// storing address size
+addressLength = sizeof(serverAddress);
+// checking connection
+connect(serverDescriptor,(struct sockaddr*)&amp;serverAddress,addressLength);
+// sending and receiving the messages
+sendto(serverDescriptor,sendMessage,MAXLINE,0,(struct
+sockaddr*)&amp;serverAddress,addressLength);
+recvfrom(serverDescriptor,recvMessage,MAXLINE,0,NULL,NULL);
+printf(&quot;\nServer&#39;s Echo : %s\n&quot;,recvMessage);
+return 0;
+}
+4Server:
+#include&lt;stdio.h&gt;
+#include&lt;stdlib.h&gt;
+
+#include&lt;sys/types.h&gt;
+#include&lt;sys/socket.h&gt;
+#include&lt;netinet/in.h&gt;
+#include&lt;unistd.h&gt;
+// time
+#define MAXLINE 1024
+#define PORT 5035
+int main(){
+int socketDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
+int number;
+socklen_t addressLength;
+char message[MAXLINE];
+struct sockaddr_in serverAddress,clientAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr=INADDR_ANY;
+serverAddress.sin_port=htons(PORT);
+bind(socketDescriptor,(struct sockaddr*)&amp;serverAddress,sizeof(serverAddress));
+printf(&quot;\nServer Started ...\n&quot;);
+while(1){
+printf(&quot;\n&quot;);
+addressLength = sizeof(clientAddress);
+number = recvfrom(socketDescriptor,message,MAXLINE,0,(struct
+sockaddr*)&amp;clientAddress,&amp;addressLength);
+printf(&quot;\n Client&#39;s Message: %s &quot;,message);
+if(number&lt;6)
+perror(&quot;send error&quot;);
+sendto(socketDescriptor,message,number,0,(struct
+sockaddr*)&amp;clientAddress,addressLength);
+}
+return 0;
+}
+
+Exp5:
+Concurrent tcp/ip day time server:
+5Client:
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &quot;string.h&quot;
+#define PORT 9002 //the port users will be connecting to
+#define MAXLINE 30 //for buffer size
+int main(){
+int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+char serverResponse[MAXLINE];
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr = INADDR_ANY;
+serverAddress.sin_port = htons(PORT);
+connect(socket_descriptor, (struct sockaddr *)&amp;serverAddress, sizeof(serverAddress));
+recv(socket_descriptor,serverResponse,MAXLINE-1,0);
+printf(&quot;\nTIME FROM SERVER %s\n&quot;,serverResponse);
+return 0;
+}
+5Server:
+#include&lt;stdio.h&gt;
+#include&lt;stdlib.h&gt;
+#include&lt;sys/types.h&gt;
+#include&lt;sys/socket.h&gt;
+#include&lt;netinet/in.h&gt;
+
+#include&lt;unistd.h&gt;
+#include&lt;time.h&gt;
+//port value and the max size for buffer
+#define PORT 9002 //the port users will be connecting to
+#define BACKLOG 10 //how many pending connections queue will hold
+int main(){
+//******Time Setup********
+time_t currentTime ;
+time(&amp;currentTime);
+//******************
+int countClient = 0;
+int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr=INADDR_ANY;
+serverAddress.sin_port=htons(PORT);
+//binding address
+bind(socket_descriptor,(struct sockaddr*)&amp;serverAddress,sizeof(serverAddress));
+//listening to the queue
+listen(socket_descriptor,BACKLOG);
+printf(&quot;\nServer Started ...&quot;);
+while(1){
+countClient++;
+printf(&quot;\n&quot;);
+int client_socket = accept(socket_descriptor, NULL, NULL);
+// char *string = asctime(timeinfo);
+printf(&quot;\nClient %d has requested for time at %s&quot;, countClient, ctime(&amp;currentTime));
+//sending time to the client side
+// ctime(&amp;time_from_pc)
+send(client_socket,ctime(&amp;currentTime), 30, 0);
+}
+
+return 0;
+}
+Exp6
+half duplex chat using tcp/ip:
+6Client:
+#include &quot;stdio.h&quot;
+#include &quot;stdlib.h&quot;
+#include &quot;string.h&quot;
+//headers for socket and related functions
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+//for including structures which will store information needed
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+//for gethostbyname
+#include &quot;netdb.h&quot;
+#include &quot;arpa/inet.h&quot;
+//defines
+#define h_addr h_addr_list[0] /* for backward compatibility */
+#define PORT 9002 // port number
+#define MAX 1000 //maximum buffer size
+//main function
+int main(){
+char serverResponse[MAX];
+char clientResponse[MAX];
+//creating a socket
+int socketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
+//placeholder for the hostname and my ip address
+char hostname[MAX], ipaddress[MAX];
+struct hostent *hostIP; //placeholder for the ip address
+//if the gethostname returns a name then the program will get the ip address
+if(gethostname(hostname,sizeof(hostname))==0){
+hostIP = gethostbyname(hostname);//the netdb.h fucntion gethostbyname
+}else{
+printf(&quot;ERROR:FCC4539 IP Address Not &quot;);
+}
+
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_port = htons(PORT);
+serverAddress.sin_addr.s_addr = INADDR_ANY;
+connect(socketDescriptor, (struct sockaddr *)&amp;serverAddress, sizeof(serverAddress));
+// getting the address port and remote host
+printf(&quot;\nLocalhost: %s\n&quot;, inet_ntoa((struct in_addr)hostIP-&gt;h_addr));
+printf(&quot;Local Port: %d\n&quot;, PORT);
+printf(&quot;Remote Host: %s\n&quot;, inet_ntoa(serverAddress.sin_addr));
+while (1)
+{ //recieve the data from the server
+recv(socketDescriptor, serverResponse, sizeof(serverResponse), 0);
+//recieved data from the server successfully then printing the data obtained from the
+server
+printf(&quot;\nSERVER : %s&quot;, serverResponse);
+printf(&quot;\ntext message here... :&quot;);
+scanf(&quot;%s&quot;, clientResponse);
+send(socketDescriptor, clientResponse, sizeof(clientResponse), 0);
+}
+//closing the socket
+close(socketDescriptor);
+return 0;
+}
+6Server:
+#include &quot;stdio.h&quot;
+#include &quot;stdlib.h&quot;
+#include &quot;string.h&quot;
+//headers for socket and related functions
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+//for including structures which will store information needed
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+//for gethostbyname
+#include &quot;netdb.h&quot;
+#include &quot;arpa/inet.h&quot;
+#define MAX 1000
+
+#define BACKLOG 5 // how many pending connections queue will hold
+int main()
+{
+char serverMessage[MAX];
+char clientMessage[MAX];
+//create the server socket
+int socketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
+
+struct sockaddr_in serverAddress;
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_port = htons(9002);
+serverAddress.sin_addr.s_addr = INADDR_ANY;
+//calling bind function to oir specified IP and port
+bind(socketDescriptor, (struct sockaddr*)&amp;serverAddress, sizeof(serverAddress));
+listen(socketDescriptor, BACKLOG);
+//starting the accepting
+int clientSocketDescriptor = accept(socketDescriptor, NULL, NULL);
+while (1)
+{
+printf(&quot;\ntext message here .. :&quot;);
+scanf(&quot;%s&quot;, serverMessage);
+send(clientSocketDescriptor, serverMessage, sizeof(serverMessage) , 0);
+//recieve the data from the server
+recv(clientSocketDescriptor, &amp;clientMessage, sizeof(clientMessage), 0) ;
+//recieved data from the server successfully then printing the data obtained from the server
+printf(&quot;\nCLIENT: %s&quot;, clientMessage);
+}
+//close the socket
+close(socketDescriptor);
+return 0;
+}
+Exp7
+full duplex chat using tcp/ip:
+7Client:
+#include &quot;stdio.h&quot;
+#include &quot;stdlib.h&quot;
+
+#include &quot;string.h&quot;
+//headers for socket and related functions
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+//for including structures which will store information needed
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+//for gethostbyname
+#include &quot;netdb.h&quot;
+#include &quot;arpa/inet.h&quot;
+int main()
+{
+int socketDescriptor;
+struct sockaddr_in serverAddress;
+char sendBuffer[1000],recvBuffer[1000];
+pid_t cpid;
+bzero(&amp;serverAddress,sizeof(serverAddress));
+serverAddress.sin_family=AF_INET;
+serverAddress.sin_addr.s_addr=inet_addr(&quot;127.0.0.1&quot;);
+serverAddress.sin_port=htons(5500);
+/Creating a socket, assigning IP address and port number for that socket/
+socketDescriptor=socket(AF_INET,SOCK_STREAM,0);
+/Connect establishes connection with the server using server IP address/
+connect(socketDescriptor,(struct sockaddr*)&amp;serverAddress,sizeof(serverAddress));
+/Fork is used to create a new process/
+cpid=fork();
+if(cpid==0)
+{
+while(1)
+{
+bzero(&amp;sendBuffer,sizeof(sendBuffer));
+printf(&quot;\nType a message here ... &quot;);
+/This function is used to read from server/
+fgets(sendBuffer,10000,stdin);
+/Send the message to server/
+send(socketDescriptor,sendBuffer,strlen(sendBuffer)+1,0);
+
+printf(&quot;\nMessage sent !\n&quot;);
+}
+}
+else
+{
+while(1)
+{
+bzero(&amp;recvBuffer,sizeof(recvBuffer));
+/Receive the message from server/
+recv(socketDescriptor,recvBuffer,sizeof(recvBuffer),0);
+printf(&quot;\nSERVER : %s\n&quot;,recvBuffer);
+}
+}
+return 0;
+}
+7Server:
+#include&lt;sys/types.h&gt;
+#include&lt;sys/socket.h&gt;
+#include&lt;stdio.h&gt;
+#include&lt;unistd.h&gt;
+#include&lt;netdb.h&gt;
+#include&lt;arpa/inet.h&gt;
+#include&lt;netinet/in.h&gt;
+#include&lt;string.h&gt;
+int main(int argc,char *argv[])
+{
+int clientSocketDescriptor,socketDescriptor;
+struct sockaddr_in serverAddress,clientAddress;
+socklen_t clientLength;
+char recvBuffer[1000],sendBuffer[1000];
+pid_t cpid;
+bzero(&amp;serverAddress,sizeof(serverAddress));
+/Socket address structure/
+serverAddress.sin_family=AF_INET;
+serverAddress.sin_addr.s_addr=htonl(INADDR_ANY);
+serverAddress.sin_port=htons(5500);
+/*TCP socket is created, an Internet socket address structure is filled with
+wildcard address &amp; server’s well known port*/
+socketDescriptor=socket(AF_INET,SOCK_STREAM,0);
+
+/Bind function assigns a local protocol address to the socket/
+bind(socketDescriptor,(struct sockaddr*)&amp;serverAddress,sizeof(serverAddress));
+/*Listen function specifies the maximum number of connections that kernel should queue
+for this socket*/
+listen(socketDescriptor,5);
+printf(&quot;%s\n&quot;,&quot;Server is running ...&quot;);
+/*The server to return the next completed connection from the front of the
+completed connection Queue calls it*/
+clientSocketDescriptor=accept(socketDescriptor,(struct
+sockaddr*)&amp;clientAddress,&amp;clientLength);
+/Fork system call is used to create a new process/
+cpid=fork();
+if(cpid==0)
+{
+while(1)
+{
+bzero(&amp;recvBuffer,sizeof(recvBuffer));
+/Receiving the request from client/
+recv(clientSocketDescriptor,recvBuffer,sizeof(recvBuffer),0);
+printf(&quot;\nCLIENT : %s\n&quot;,recvBuffer);
+}
+}
+else
+{
+while(1)
+{
+bzero(&amp;sendBuffer,sizeof(sendBuffer));
+printf(&quot;\nType a message here ... &quot;);
+/Read the message from client/
+fgets(sendBuffer,10000,stdin);
+/Sends the message to client/
+send(clientSocketDescriptor,sendBuffer,strlen(sendBuffer)+1,0);
+printf(&quot;\nMessage sent !\n&quot;);
+}
+}
+return 0;
+}
+Exp8 :
+Implementation of file transfer protocol:
+8Client:
+
+#include &quot;stdio.h&quot;
+#include &quot;stdlib.h&quot;
+#include &quot;string.h&quot;
+//headers for socket and related functions
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;sys/stat.h&gt;
+//for including structures which will store information needed
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+//for gethostbyname
+#include &quot;netdb.h&quot;
+#include &quot;arpa/inet.h&quot;
+// defining constants
+#define PORT 9002
+int main()
+{
+int serverDescriptor = socket(AF_INET, SOCK_STREAM, 0);
+struct sockaddr_in serverAddress;
+char buffer[100], file[1000];
+bzero(&amp;serverAddress, sizeof(serverAddress));
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr = inet_addr(&quot;127.0.0.1&quot;);
+serverAddress.sin_port = htons(PORT);
+connect(serverDescriptor,(struct sockaddr*)&amp;serverAddress,sizeof(serverAddress));
+while (1){
+printf(&quot;File name : &quot;);
+scanf(&quot;%s&quot;,buffer);
+send(serverDescriptor,buffer,strlen(buffer)+1,0);
+printf(&quot;%s\n&quot;,&quot;File Output : &quot;);
+recv(serverDescriptor,&amp;file,sizeof(file),0);
+printf(&quot;%s&quot;,file);
+}
+return 0;
+}
+
+8Server:
+#include &quot;stdio.h&quot;
+#include &quot;stdlib.h&quot;
+#include &quot;string.h&quot;
+//headers for socket and related functions
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;sys/stat.h&gt;
+//for including structures which will store information needed
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+//for gethostbyname
+#include &quot;netdb.h&quot;
+#include &quot;arpa/inet.h&quot;
+// defining constants
+#define PORT 9002
+#define BACKLOG 5
+int main()
+{
+int size;
+int socketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
+struct sockaddr_in serverAddress, clientAddress;
+socklen_t clientLength;
+struct stat statVariable;
+char buffer[100], file[1000];
+FILE *filePointer;
+bzero(&amp;serverAddress, sizeof(serverAddress));
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+serverAddress.sin_port = htons(PORT);
+bind(socketDescriptor, (struct sockaddr *)&amp;serverAddress, sizeof(serverAddress));
+listen(socketDescriptor,BACKLOG);
+printf(&quot;Server has started working ...&quot;);
+
+int clientDescriptor = accept(socketDescriptor,(struct
+sockaddr*)&amp;clientAddress,&amp;clientLength);
+while(1){
+bzero(buffer,sizeof(buffer));
+bzero(file,sizeof(file));
+recv(clientDescriptor,buffer,sizeof(buffer),0);
+filePointer = fopen(buffer,&quot;r&quot;);
+stat(buffer,&amp;statVariable);
+size=statVariable.st_size;
+fread(file,sizeof(file),1,filePointer);
+send(clientDescriptor,file,sizeof(file),0);
+}
+return 0;
+}
+
+Exp 9 :
+Remote command execution using udp:
+9client:
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;netdb.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;string.h&gt;
+#include &lt;arpa/inet.h&gt;
+#define MAX 1000
+int main()
+{
+int serverDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
+char buffer[MAX], message[MAX];
+struct sockaddr_in cliaddr, serverAddress;
+socklen_t serverLength = sizeof(serverAddress);
+bzero(&amp;serverAddress, sizeof(serverAddress));
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr = inet_addr(&quot;127.0.0.1&quot;);
+serverAddress.sin_port = htons(9976);
+bind(serverDescriptor, (struct sockaddr *)&amp;serverAddress, sizeof(serverAddress));
+
+while (1)
+{
+printf(&quot;\nCOMMAND FOR EXECUTION ... &quot;);
+fgets(buffer, sizeof(buffer), stdin);
+sendto(serverDescriptor, buffer, sizeof(buffer), 0, (struct sockaddr *)&amp;serverAddress,
+serverLength);
+printf(&quot;\nData Sent !&quot;);
+recvfrom(serverDescriptor, message, sizeof(message), 0, (struct sockaddr
+*)&amp;serverAddress, &amp;serverLength);
+printf(&quot;UDP SERVER : %s&quot;, message);
+}
+return 0;
+}
+9Server:
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;netdb.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;arpa/inet.h&gt;
+#include &lt;unistd.h&gt;
+#define MAX 1000
+int main()
+{
+int serverDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
+int size;
+char buffer[MAX], message[] = &quot;Command Successfully executed !&quot;;
+struct sockaddr_in clientAddress, serverAddress;
+socklen_t clientLength = sizeof(clientAddress);
+bzero(&amp;serverAddress, sizeof(serverAddress));
+serverAddress.sin_family = AF_INET;
+serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+serverAddress.sin_port = htons(9976);
+bind(serverDescriptor, (struct sockaddr *)&amp;serverAddress, sizeof(serverAddress));
+
+while (1)
+{
+bzero(buffer, sizeof(buffer));
+recvfrom(serverDescriptor, buffer, sizeof(buffer), 0, (struct sockaddr *)&amp;clientAddress,
+&amp;clientLength);
+system(buffer);
+printf(&quot;Command Executed ... %s &quot;, buffer);
+sendto(serverDescriptor, message, sizeof(message), 0, (struct sockaddr *)&amp;clientAddress,
+clientLength);
+}
+close(serverDescriptor);
+return 0;
+}
+Exp 10
+arp implementation using udp:
+#include&lt;sys/types.h&gt;
+#include&lt;sys/socket.h&gt;
+#include&lt;net/if_arp.h&gt;
+#include&lt;sys/ioctl.h&gt;
+#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+#include&lt;unistd.h&gt;
+#include&lt;math.h&gt;
+#include&lt;complex.h&gt;
+#include&lt;arpa/inet.h&gt;
+#include&lt;netinet/in.h&gt;
+#include&lt;netinet/if_ether.h&gt;
+#include&lt;net/ethernet.h&gt;
+#include&lt;stdlib.h&gt;
+int main()
+{
+struct sockaddr_in sin={0};
+struct arpreq myarp={{0}};
+unsigned char *ptr;
+int sd;
+sin.sin_family=AF_INET;
+printf(&quot;Enter IP address: &quot;);
+char ip[20];
+scanf(&quot;%s&quot;, ip); if(inet_pton(AF_INET,ip,&amp;sin.sin_addr)==0) {
+printf(&quot;IP address Entered &#39;%s&#39; is not valid \n&quot;,ip);
+exit(0);
+}
+
+memcpy(&amp;myarp.arp_pa,&amp;sin,sizeof(myarp.arp_pa));
+strcpy(myarp.arp_dev,&quot;echo&quot;);
+sd=socket(AF_INET,SOCK_DGRAM,0);
+printf(&quot;\nSend ARP request\n&quot;);
+if(ioctl(sd,SIOCGARP,&amp;myarp)==1)
+{
+printf(&quot;No Entry in ARP cache for &#39;%s&#39;\n&quot;,ip);
+exit(0);
+
+}
+ptr=&amp;myarp.arp_pa.sa_data[0];
+printf(&quot;Received ARP Reply\n&quot;);
+printf(&quot;\nMAC Address for &#39;%s&#39; : &quot;,ip);
+printf(&quot;%p:%p:%p:%p:%p:%p\n&quot;,ptr,(ptr+1),(ptr+2),(ptr+3),(ptr+4),(ptr+5));
+return 0;
+}
+10 exp bash ip command:
+cc 10.c
+./a.out any ip
+For example:
+cc 10.c
+./a.out 172.16.5.201
+</p>
+</body>
+</html>
